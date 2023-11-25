@@ -1,0 +1,103 @@
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import StandardScaler
+import joblib
+
+# Load the dataset
+train_data = pd.read_csv('train.csv')
+test_data = pd.read_csv('test.csv')
+gender_submission = pd.read_csv('gender_submission.csv')
+
+# Perform exploratory data analysis (EDA)
+print(train_data.info())
+print(train_data.describe())
+sns.countplot(x='Survived', hue='Sex', data=train_data)
+plt.show()
+
+# Clean the data
+# Handle missing values
+# Check for missing values
+print(train_data.isnull().sum())
+# Fill missing values (you might need to customize this based on your data)
+train_data['Age'].fillna(train_data['Age'].median(), inplace=True)
+train_data['Embarked'].fillna(train_data['Embarked'].mode()[0], inplace=True)
+
+# Feature engineering
+# Convert categorical features to numerical using one-hot encoding
+train_data = pd.get_dummies(train_data, columns=['Sex', 'Embarked', 'Pclass'], drop_first=True)
+
+# Split the data into train and test sets
+X = train_data.drop(['Survived', 'PassengerId', 'Name', 'Ticket', 'Cabin'], axis=1)
+y = train_data['Survived']
+X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Build the model
+model = LogisticRegression()
+
+# Train the model
+model.fit(X_train, y_train)
+
+# Show performance improvement by hyper-parameter modification (if needed)
+
+# Evaluate the model on the validation set
+y_val_pred = model.predict(X_val)
+
+# Show evaluation metrics
+print("Accuracy:", accuracy_score(y_val, y_val_pred))
+print("Confusion Matrix:\n", confusion_matrix(y_val, y_val_pred))
+print("Classification Report:\n", classification_report(y_val, y_val_pred))
+
+# Save the model
+joblib.dump(model, 'titanic_logistic_regression_model.pkl')
+
+
+____________________________________________
+
+
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix
+import seaborn as sns
+import joblib
+
+# Load the trained model
+model = joblib.load('titanic_logistic_regression_model.pkl')
+
+# 1. Generate Training Curve
+
+n_iterations = 10
+iteration_numbers = np.arange(1, n_iterations + 1)
+training_accuracies = []
+
+for i in range(n_iterations):
+    model.fit(X_train, y_train)
+    y_train_pred = model.predict(X_train)
+    training_accuracy = np.sum(y_train_pred == y_train) / len(y_train)
+    training_accuracies.append(training_accuracy)
+
+plt.figure(figsize=(10, 6))
+plt.plot(iteration_numbers, training_accuracies, label='Training Accuracy', color='blue')
+plt.title('Training Accuracy Over Iterations')
+plt.xlabel('Iterations')
+plt.ylabel('Accuracy')
+plt.legend()
+plt.show()
+
+# 2. Generate Confusion Matrix
+plt.figure(figsize=(6, 6))
+y_val_pred = model.predict(X_val)
+cm = confusion_matrix(y_val, y_val_pred)
+
+sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', cbar=False,
+            xticklabels=['Not Survived', 'Survived'],
+            yticklabels=['Not Survived', 'Survived'])
+plt.title('Confusion Matrix on Validation Set')
+
+plt.show()
+
